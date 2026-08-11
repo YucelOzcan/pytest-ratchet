@@ -76,7 +76,8 @@ frozen, and honest.
 - [x] Prior-art survey (betterer, semgrep/ruff/mypy baselines, import-linter,
       pytest-archon, deptry) — differences stated explicitly before any claim:
       [docs/prior-art.md](docs/prior-art.md)
-- [ ] Core primitive: justified allowlist + new-violation check + staleness check
+- [x] Core primitive: justified allowlist + new-violation check + staleness
+      check — `pytest_ratchet.core` + the `ratchet` fixture, with tests and CI
 - [ ] `ratchet init` scaffolding (first integration: vulture)
 - [ ] Resolver protocol + reachability guard recipes with a runnable example
       project under `examples/`

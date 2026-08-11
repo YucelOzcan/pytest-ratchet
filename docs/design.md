@@ -201,7 +201,9 @@ only fixes the boundary:
 The primitive is a library function plus a thin pytest layer:
 
 ```python
-# ratchet/core.py — no pytest dependency
+# pytest_ratchet/core.py — no pytest dependency
+# (import package is pytest_ratchet: the bare `ratchet` name is already a
+#  distribution on PyPI, so claiming its module namespace risks collision)
 check(section: str, findings: Iterable[Finding], baseline: Baseline) -> Report
 
 # test_ratchet.py — what a user writes
