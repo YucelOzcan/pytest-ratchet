@@ -26,10 +26,41 @@ pytest            # from then on: new finding = red, stale baseline entry = red
 This tool does not fix your code quality. It does one thing: it keeps your
 baseline honest.
 
+## Prior art
+
+Baseline tools exist; most freeze debt in one direction only, and none of the
+surveyed ones require a written reason per entry. Full survey with sources:
+[docs/prior-art.md](docs/prior-art.md) (2026-08-11).
+
+| Tool | Baseline file | New finding fails | Stale entry fails | Per-entry reason | Scanner-agnostic | pytest-native |
+|---|---|---|---|---|---|---|
+| [betterer](https://github.com/phenomnomnominal/betterer) (JS) | machine-written snapshot | yes | CI mode, any snapshot diff | no | yes | no |
+| [semgrep `--baseline-commit`](https://semgrep.dev/docs/cli-reference) | no (diffs vs git commit) | yes | n/a — nothing stored | no | semgrep-only | no |
+| [ruff](https://github.com/astral-sh/ruff/issues/1149) + noqa | no native baseline | yes | RUF100, inline noqa only | global string only | ruff-only | no |
+| [mypy-baseline](https://github.com/orsinium-labs/mypy-baseline) | yes | yes | **yes, by default** | no | mypy-only | no |
+| [pylint](https://pylint.readthedocs.io/en/stable/user_guide/messages/information/useless-suppression.html) (+pylint-silent) | no (inline disables) | yes | I0021, off by default | no | pylint-only | no |
+| [import-linter](https://import-linter.readthedocs.io/en/stable/) | allowlist in config | yes | **yes, by default** | no | imports-only | no |
+| [pytest-archon](https://github.com/jwbargsten/pytest-archon) | no baseline at all | yes | n/a | rule-level comment | imports-only | yes |
+| [deptry](https://deptry.com/usage/) | ignores in config | yes | no | no | deps-only | no |
+| [vulture](https://github.com/jendrikseipp/vulture) whitelist | fake-usage code | yes | manual, optional | no | vulture-only | no |
+| **pytest-ratchet** | **human-owned, justified** | **yes** | **yes, always** | **required** | **yes** | **yes** |
+
+Credit where due: mypy-baseline and import-linter already fail on stale
+entries by default — each within a single domain, with no justifications.
+betterer's CI mode rejects any drift from its snapshot, but the snapshot is
+machine-regenerated, not human-edited. The layer pytest-ratchet adds is the
+combination: required per-entry justification + bidirectional enforcement +
+arbitrary scanners + pytest. Nothing more is claimed.
+
+Scanners like vulture, deptry, and knip are not competitors here — they are
+producers. The scanner finds; the ratchet keeps what it found justified,
+frozen, and honest.
+
 ## Roadmap
 
-- [ ] Prior-art survey (betterer, semgrep/ruff/mypy baselines, import-linter,
-      pytest-archon, deptry) — differences stated explicitly before any claim
+- [x] Prior-art survey (betterer, semgrep/ruff/mypy baselines, import-linter,
+      pytest-archon, deptry) — differences stated explicitly before any claim:
+      [docs/prior-art.md](docs/prior-art.md)
 - [ ] Core primitive: justified allowlist + new-violation check + staleness check
 - [ ] `ratchet init` scaffolding (first integration: vulture)
 - [ ] Resolver protocol + reachability guard recipes with a runnable example
