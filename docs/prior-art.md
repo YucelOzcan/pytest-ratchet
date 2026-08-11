@@ -340,7 +340,7 @@ always-on. ([configuration hints](https://knip.dev/reference/configuration-hints
 | deptry | ignores in config | yes | no | no | deps-only | no |
 | vulture whitelist | fake-usage code | yes | manual, optional | no | vulture-only | no |
 | pytest-quarantine | yes | yes | no | no | test outcomes only | yes |
-| **pytest-ratchet (planned)** | **yes, human-owned** | **yes** | **yes, always** | **required** | **yes** | **yes** |
+| **pytest-ratchet (planned)** | **yes, human-owned** | **yes** | **yes, always** | **required field** | **yes** | **yes** |
 
 ## The claim, stated narrowly
 
@@ -362,10 +362,11 @@ Every ingredient exists somewhere:
 - pytest-native architecture checks: **pytest-archon** (no baseline).
 
 What we did not find anywhere, in any ecosystem (as of 2026-08-11): a
-**committed baseline** where each entry carries a **required human-written
-justification**, combined with bidirectional enforcement (new finding fails,
-stale entry fails), applied to **arbitrary scanner findings**, running
-**inside pytest**. That narrow combination — plus the resolver protocol for
+**committed baseline** where each entry carries a **required reason field**
+(a `TODO` placeholder is legal, but it is counted and surfaced on every
+run), combined with bidirectional enforcement (new finding fails, stale
+entry fails), applied to **arbitrary scanner findings**, running **inside
+pytest**. That narrow combination — plus the resolver protocol for
 runtime-resolution reachability guards — is the layer pytest-ratchet adds.
 Nothing more is claimed.
 

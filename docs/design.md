@@ -1,8 +1,9 @@
 # Core primitive design
 
-Status: draft, 2026-08-11. Covers the v1 core primitive only: the baseline
-file format, the matching key, and the enforcement semantics. `ratchet init`,
-the resolver protocol, and reachability recipes are designed separately.
+Status: draft, 2026-08-11; revised same day after external review. Covers
+the v1 core primitive only: the baseline file format, the matching key, and
+the enforcement semantics. `ratchet init`, the resolver protocol, and
+reachability recipes are designed separately.
 
 Every decision here traces back to a failure mode documented in
 [prior-art.md](prior-art.md). Those lessons are cited inline as
@@ -18,10 +19,10 @@ Every decision here traces back to a failure mode documented in
 - **Scanner section** — entries are grouped per scanner, so multiple
   scanners can share one baseline file without key collisions.
 
-## Decision 1 — file format: TOML, in a dedicated `.ratchet.toml`
+## Decision 1 — file format: TOML, in a dedicated `ratchet-baseline.toml`
 
 ```toml
-# .ratchet.toml — every entry needs a reason; stale entries fail the run.
+# ratchet-baseline.toml — every entry needs a reason; stale entries fail the run.
 
 [vulture]
 
@@ -50,14 +51,22 @@ Why TOML:
 
 Why a dedicated file (not `pyproject.toml`): the baseline changes at a
 different cadence than project metadata, and review should see baseline
-churn in isolation. The path is configurable; `.ratchet.toml` is the default.
+churn in isolation. Why a *visible* name and not a dotfile: this file is a
+human-owned artifact that pull requests are supposed to look at; the dotfile
+convention signals "tool config, ignore me", which is the opposite of the
+product's thesis. PHPStan's visible `phpstan-baseline.neon` sets the
+precedent. The path is configurable; `ratchet-baseline.toml` is the default.
 
 **The file is human-owned and never regenerated wholesale.** Psalm and
 RuboCop rewrite their files from scratch, so hand-written text cannot
 survive; that mechanical fact is *why* those formats carry no reasons
 **[lesson: Psalm, RuboCop]**. pytest-ratchet has no operation that rewrites
 the file. `ratchet init` (designed separately) only creates or appends
-entries; removal is always a human edit.
+entries; removal is always a human edit. Consequence for init: since stdlib
+has no TOML *writer* (`tomllib` is read-only), init will do **plain-text
+block appends** — no TOML-writing dependency, and mechanically incapable of
+rewriting what a human wrote. This falls straight out of the
+never-regenerate rule.
 
 ## Decision 2 — matching key: adapter-provided identity, no line numbers
 
@@ -97,11 +106,22 @@ e.g.  pbx/handlers.py::function::on_hangup
   is a baseline *format error* that fails the run — the analog of PHPStan's
   `reportIgnoresWithoutComments`, applied where PHPStan refuses to apply it:
   inside the baseline artifact **[lesson: PHPStan doctrine]**.
-- `reason = "TODO"` is legal and deliberately cheap to write — `ratchet
-  init` seeds it. TODO reasons are surfaced in every run's summary
-  (`3 entries still have reason TODO`) so unexamined debt stays visible
-  without blocking adoption. A strict mode can escalate TODO to failure
-  later; v1 only reports.
+- **The tension, owned explicitly:** `reason = "TODO"` is legal, so what is
+  required is the *field*, not yet a considered justification. This is a
+  deliberate adoption trade-off, not a loophole we hope nobody notices:
+  `ratchet init` must be able to seed a legacy codebase without demanding a
+  hundred essays up front, and a forbidden placeholder would only produce a
+  hundred fake reasons ("legacy", "old code"), which are TODOs that *can't*
+  be counted. TODO is the honest placeholder: machine-recognizable,
+  reported on every run, impossible to mistake for a decision. All public
+  claim language follows this: "required reason field; TODO tolerated and
+  surfaced", never "every entry is justified".
+- **`strict_todo` ships in v1**, opt-in: with it enabled, a TODO reason
+  fails the run like any other format error. Teams that want to force the
+  essays can, from day one; "strict mode later" would be a weaker answer.
+- Every run's summary reports TODO debt with its age:
+  `2 TODO entries (oldest: 45 days)` — computed from `added`, so
+  visibility pressure grows on its own.
 - `added` (a TOML date) is optional but seeded by init — it costs nothing
   and answers "how long have we been carrying this?" in review.
 - Justification is per *entry*, not per scanner or per run — the exact
@@ -136,6 +156,45 @@ RATCHET: 2 problems in section [vulture]
   an entry — with a reason — by hand (or via init on first adoption).
 - Messages always show the remedy in the failure text, because the failure
   fires in CI where nobody reads docs first.
+- Report output is **deterministically ordered** (sorted by key within each
+  class) so CI logs diff cleanly between runs.
+- **Green runs are not silent.** A passing check prints one summary line —
+  `section [vulture]: 12 entries OK, 2 TODO (oldest: 45 days)` — because an
+  invisible success is indistinguishable from a check that didn't run.
+
+## No silent green: edge behaviors
+
+The failure mode this tool exists to kill is the check that quietly stops
+checking. Three edge cases are therefore defined behavior, not accidents:
+
+- **Scanner unavailable → failure, never skip.** If the adapter cannot run
+  its scanner (vulture not installed, binary missing), the check **fails**
+  with an install remedy. A skip would turn CI green while the baseline is
+  effectively disabled — the exact silent-config-rollback wound this
+  project was born from.
+- **Baseline file missing → empty baseline, with guidance.** All current
+  findings are reported as NEW (correct: nothing has been accepted), and
+  the failure text recommends `ratchet init` for first-time setup. Not an
+  error class of its own — a greenfield project with zero findings and no
+  baseline file passes, by design.
+- **Malformed baseline → format error, fail.** Duplicate keys within a
+  section (legal TOML, human-producible) are a hard failure — there is no
+  "first one wins". Unknown fields on an entry fail too: a typo like
+  `reasn = "..."` must not silently degrade an entry (the missing `reason`
+  check would catch that case anyway, but strict schema is cheap and
+  catches typos in optional fields as well).
+
+## Adapter contract (pointer)
+
+Adapters are designed in the init/integration doc, not here; the primitive
+only fixes the boundary:
+
+- A `Finding` carries `kind`, `key`, and optional display-only context
+  (message, current line number) that never participates in matching.
+- Keys use `/` as the path separator on every platform — adapters
+  normalize, so a baseline written on Linux matches on Windows.
+- The `vulture_findings()` in the sketch below is a placeholder for that
+  future adapter API; v1 ships exactly one real adapter (vulture).
 
 ## pytest integration (v1 shape)
 
@@ -150,14 +209,17 @@ def test_dead_code(ratchet):
     ratchet.check("vulture", vulture_findings())
 ```
 
-- `ratchet` is a fixture that loads `.ratchet.toml` once per session and
-  fails the test with the report above.
+- `ratchet` is a fixture that loads `ratchet-baseline.toml` once per session
+  and fails the test with the report above. Loading is read-only, so
+  pytest-xdist workers each loading their own copy is harmless.
 - One test per scanner section keeps failures separately selectable
   (`pytest -k vulture`) and lets teams adopt scanners independently.
+- `strict_todo` is exposed as a pytest ini option; the core takes it as a
+  plain argument.
 - Core stays pytest-free so the same primitive can back a CLI later.
 
 ## Out of scope for v1 (recorded so they're deliberate)
 
 - Pin-alignment checks (withdrawn 2026-08-10; not a ratchet).
-- Deadlines/expiry dates on entries, strict-TODO mode, per-entry owners.
+- Deadlines/expiry dates on entries, per-entry owners.
 - Any operation that edits the baseline besides `ratchet init` append.

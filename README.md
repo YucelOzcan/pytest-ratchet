@@ -7,8 +7,9 @@ A pytest plugin for baselines that cannot lie.
 Most baseline tools are one-way: known debt is frozen, new violations fail CI,
 and when debt gets *fixed* nobody notices — the baseline file quietly starts
 lying. pytest-ratchet enforces the other direction too: every baseline entry
-carries a written justification, and an entry that no longer matches a real
-finding fails CI until it is removed.
+carries a reason field that must be filled in — `TODO` is a legal value, but
+it is counted and reported on every run until someone replaces it — and an
+entry that no longer matches a real finding fails CI until it is removed.
 
 **Status: work in progress — not yet released.**
 
@@ -45,7 +46,7 @@ surveyed ones require a written reason per entry. Full survey with sources:
 | [pytest-archon](https://github.com/jwbargsten/pytest-archon) | no baseline at all | yes | n/a | rule-level comment | imports-only | yes |
 | [deptry](https://deptry.com/usage/) | ignores in config | yes | no | no | deps-only | no |
 | [vulture](https://github.com/jendrikseipp/vulture) whitelist | fake-usage code | yes | manual, optional | no | vulture-only | no |
-| **pytest-ratchet** | **human-owned, justified** | **yes** | **yes, always** | **required** | **yes** | **yes** |
+| **pytest-ratchet** | **human-owned, justified** | **yes** | **yes, always** | **required field** | **yes** | **yes** |
 
 Credit where due: bidirectional enforcement is not novel. PHPStan (including
 count decay), Psalm, mypy-baseline, and ESLint's bulk suppressions all fail
@@ -58,8 +59,8 @@ silently discarded when the issue closes. The per-entry reason is missing
 from existing baselines by explicit doctrine, not oversight: PHPStan's docs
 call the "why" comment "often crucial" and "not an option when using the
 baseline" — the survey's rebuttal section addresses this directly. The layer
-pytest-ratchet adds is the combination: required per-entry justification in a
-committed, human-owned baseline + bidirectional enforcement + arbitrary
+pytest-ratchet adds is the combination: a required per-entry reason field in
+a committed, human-owned baseline + bidirectional enforcement + arbitrary
 scanners + pytest. Nothing more is claimed.
 
 The survey also covers PHPStan, Psalm, RuboCop's todo file, ESLint bulk
