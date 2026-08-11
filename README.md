@@ -45,12 +45,24 @@ surveyed ones require a written reason per entry. Full survey with sources:
 | [vulture](https://github.com/jendrikseipp/vulture) whitelist | fake-usage code | yes | manual, optional | no | vulture-only | no |
 | **pytest-ratchet** | **human-owned, justified** | **yes** | **yes, always** | **required** | **yes** | **yes** |
 
-Credit where due: mypy-baseline and import-linter already fail on stale
-entries by default — each within a single domain, with no justifications.
-betterer's CI mode rejects any drift from its snapshot, but the snapshot is
-machine-regenerated, not human-edited. The layer pytest-ratchet adds is the
-combination: required per-entry justification + bidirectional enforcement +
-arbitrary scanners + pytest. Nothing more is claimed.
+Credit where due: bidirectional enforcement is not novel. PHPStan (including
+count decay), Psalm, mypy-baseline, and ESLint's bulk suppressions all fail
+by default when a listed finding no longer exists, and import-linter does the
+same for import allowlists — each within a single domain, none with
+justifications. betterer's CI mode rejects any drift from its snapshot, but
+the snapshot is machine-regenerated, not human-edited. SonarQube has
+first-class per-finding justification comments — optional, stored server-side,
+silently discarded when the issue closes. The per-entry reason is missing
+from existing baselines by explicit doctrine, not oversight: PHPStan's docs
+call the "why" comment "often crucial" and "not an option when using the
+baseline" — the survey's rebuttal section addresses this directly. The layer
+pytest-ratchet adds is the combination: required per-entry justification in a
+committed, human-owned baseline + bidirectional enforcement + arbitrary
+scanners + pytest. Nothing more is claimed.
+
+The survey also covers PHPStan, Psalm, RuboCop's todo file, ESLint bulk
+suppressions, and SonarQube in full — see
+[docs/prior-art.md](docs/prior-art.md) for their rows and sources.
 
 Scanners like vulture, deptry, and knip are not competitors here — they are
 producers. The scanner finds; the ratchet keeps what it found justified,
