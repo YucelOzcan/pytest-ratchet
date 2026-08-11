@@ -1,5 +1,7 @@
 # pytest-ratchet
 
+**Debt is allowed. Lying about it is not.**
+
 A pytest plugin for baselines that cannot lie.
 
 Most baseline tools are one-way: known debt is frozen, new violations fail CI,
