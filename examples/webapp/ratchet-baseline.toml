@@ -1,0 +1,45 @@
+# ratchet-baseline.toml — accepted findings, one [[<section>.entry]] each.
+# Every entry needs a reason; replace TODO once the finding is examined.
+# New findings fail the run; stale entries fail it too, until removed.
+
+# --- vulture: static dead-code scan -----------------------------------------
+# All handlers are dispatched by name via routes.ROUTES (getattr), which
+# static analysis cannot see. These are examined false-positives, kept with
+# the reason written down — not silenced with a noqa nobody will ever audit.
+
+[[vulture.entry]]
+key = "app/handlers.py::function::handle_home"
+reason = "dispatched by name via routes.ROUTES — getattr dispatch is invisible to vulture"
+added = 2026-08-12
+
+[[vulture.entry]]
+key = "app/handlers.py::function::handle_login"
+reason = "dispatched by name via routes.ROUTES — getattr dispatch is invisible to vulture"
+added = 2026-08-12
+
+[[vulture.entry]]
+key = "app/handlers.py::function::handle_export"
+reason = "dispatched by name via routes.ROUTES once mounted; see [handlers] entry below"
+added = 2026-08-12
+
+[[vulture.entry]]
+key = "app/routes.py::function::dispatch"
+reason = "entry point of the example app; a real deployment's WSGI layer would call it"
+added = 2026-08-12
+
+# --- handlers: runtime-reachability resolver ---------------------------------
+# vulture accepted handle_export above as "dispatched once mounted" — but the
+# resolver, which understands the ROUTES table, knows it is NOT mounted yet.
+# This is the layer static analysis cannot provide.
+
+[[handlers.entry]]
+key = "handle_export"
+reason = "admin CSV export, written ahead of the admin panel; mount it in ROUTES or delete it"
+added = 2026-08-12
+
+# --- templates: runtime-reachability resolver --------------------------------
+
+[[templates.entry]]
+key = "welcome_email.html"
+reason = "TODO"
+added = 2026-08-12

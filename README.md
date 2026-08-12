@@ -88,6 +88,7 @@ frozen, and honest.
       check — `pytest_ratchet.core` + the `ratchet` fixture, with tests and CI
 - [x] `ratchet init` scaffolding (first integration: vulture) — append-only
       seeding, guard-test scaffold, self-checked output
-- [ ] Resolver protocol + reachability guard recipes with a runnable example
-      project under `examples/`
+- [x] Resolver protocol + reachability guard recipes with a runnable example
+      project under [`examples/webapp`](examples/webapp) — candidates minus
+      reachable, managed by the same baseline
 - [ ] Own CI, docs, PyPI release

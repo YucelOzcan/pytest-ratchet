@@ -37,13 +37,13 @@ def vulture_findings(
             "Install it: pip install vulture"
         ) from exc
 
-    root_path = Path(root) if root is not None else Path.cwd()
+    root_path = (Path(root) if root is not None else Path.cwd()).resolve()
     scanner = Vulture(verbose=False)
     scanner.scavenge([str(p) for p in paths], exclude=list(exclude) or None)
 
     findings: list[Finding] = []
     for item in scanner.get_unused_code(min_confidence=min_confidence):
-        path = Path(str(item.filename))
+        path = Path(str(item.filename)).resolve()
         try:
             path = path.relative_to(root_path)
         except ValueError:

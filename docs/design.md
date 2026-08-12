@@ -243,6 +243,32 @@ the baseline, scaffold the guard test.
 - A malformed existing baseline aborts init with the loader's error — seeding
   into a broken file would bury the breakage.
 
+## Resolver protocol (v1, as implemented)
+
+Reachability guards for what no scanner can see: references resolved at
+runtime (templates by filename, handlers by name from a routes table, plugin
+classes from config). Guided, not automatic — the user writes the resolver,
+because only they know how their project resolves names.
+
+- A resolver is any object with `kind: str`, `candidates() -> Iterable[str]`
+  (everything that exists) and `reachable() -> Iterable[str]` (everything
+  the runtime resolution actually reaches). `unreachable_findings(resolver)`
+  turns `candidates - reachable` into ordinary `Finding`s, so the baseline
+  manages them exactly like scanner output.
+- **Zero candidates is an error**, not an empty result: the usual cause is a
+  wrong path or glob, and a guard that sees nothing guards nothing
+  (no-silent-green). `allow_empty=True` opts out where genuinely valid.
+- Extra `reachable()` items are ignored — reachable sets are naturally wider
+  (builtins, third-party names).
+- A broken resolver is additionally caught by the ratchet itself: if
+  candidates vanish because a path moved, every existing baseline entry for
+  that section goes STALE and the run turns red.
+- `examples/webapp` is the runnable recipe set: dynamic `getattr` dispatch
+  that vulture flags wholesale (accepted with reasons), plus two resolvers —
+  orphan templates and unmounted handlers — including the case where the
+  vulture entry is legitimately accepted while the resolver still finds the
+  real problem.
+
 ## Out of scope for v1 (recorded so they're deliberate)
 
 - Pin-alignment checks (withdrawn 2026-08-10; not a ratchet).

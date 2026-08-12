@@ -19,6 +19,15 @@ def test_findings_are_keyed_by_symbol(tmp_path):
     assert "unused function" in f.message
 
 
+def test_relative_root_still_yields_relative_keys(tmp_path, monkeypatch):
+    # Regression: a relative `root` must not silently leave keys absolute.
+    (tmp_path / "proj" / "src").mkdir(parents=True)
+    (tmp_path / "proj" / "src" / "mod.py").write_text(DEAD_CODE)
+    monkeypatch.chdir(tmp_path)
+    findings = vulture_findings(["proj/src"], root="proj")
+    assert [f.key for f in findings] == ["src/mod.py::function::unused_function"]
+
+
 def test_min_confidence_filters(tmp_path):
     (tmp_path / "mod.py").write_text(DEAD_CODE)
     assert vulture_findings([tmp_path / "mod.py"], root=tmp_path, min_confidence=100) == []
