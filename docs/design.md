@@ -280,10 +280,14 @@ dominated by the vulture scan). What the exercise surfaced:
   users into a silent green: a probe like `import json` is absorbed by
   vulture's whole-corpus name analysis, so the guard stays green and the user
   believes the gate was proven. Documented in README with the unique-name
-  fix. **A `ratchet probe` subcommand** — generate a corpus-unique name,
-  inject, verify red, revert — is the machine-checked version of that advice
-  and the natural v1.1 feature; it is deliberately not v1 because writing to
-  a user's source tree deserves its own design pass.
+  fix. **A `ratchet probe` subcommand** — inject, verify red, revert — is the
+  machine-checked version of that advice and the natural v1.1 feature; it is
+  deliberately not v1 because writing to a user's source tree deserves its
+  own design pass. **Its central requirement, learned from the incident:
+  uniqueness must be verified, not assumed** — the command must search the
+  target corpus for its candidate name and pick another if it occurs,
+  because "this name is surely unique" is exactly the human intuition that
+  failed. A random suffix alone is not enough; the search is the point.
 - **`--added` shipped**: inherited baselines need the real acceptance date,
   not today's, or the TODO-age report lies from day one.
 - **Numeric budgets are a genuine gap**: an entry carrying an allowed value

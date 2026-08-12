@@ -43,3 +43,17 @@ added = 2026-08-12
 key = "welcome_email.html"
 reason = "TODO"
 added = 2026-08-12
+
+# --- scripts: a sync claim needs a mirrored pair of resolvers ----------------
+# "Every script is documented and every documented script exists" is two
+# claims, not one. Each direction gets its own section, so an accepted
+# exception in one direction cannot excuse the other.
+
+[[scripts-unlisted.entry]]
+key = "scratch_probe.py"
+reason = "personal scratch experiment; deliberately outside the documented set"
+added = 2026-08-12
+
+# [scripts-ghost] and [scripts-misfiled] have no accepted entries: a documented
+# script that does not exist, or one filed under the wrong heading, is never
+# acceptable — it is a documentation bug, and the fix is free.
