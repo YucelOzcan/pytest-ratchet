@@ -11,3 +11,7 @@ htmlcov/
 .tox/
 .idea/
 .vscode/
+
+# Makale taslakları — repo DIŞI içerik (izleyici ayrımı: repo biyografi/AI çerçevesi taşımaz).
+# Asla commit edilmez; yayın yeri dev.to / LinkedIn.
+drafts/
