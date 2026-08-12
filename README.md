@@ -93,7 +93,7 @@ one about itself.
 
 Baseline tools exist; most freeze debt in one direction only, and none of the
 surveyed ones require a written reason per entry. Full survey with sources:
-[docs/prior-art.md](docs/prior-art.md) (2026-08-11).
+[docs/prior-art.md](https://github.com/YucelOzcan/pytest-ratchet/blob/master/docs/prior-art.md) (2026-08-11).
 
 | Tool | Baseline file | New finding fails | Stale entry fails | Per-entry reason | Scanner-agnostic | pytest-native |
 |---|---|---|---|---|---|---|
@@ -125,7 +125,7 @@ scanners + pytest. Nothing more is claimed.
 
 The survey also covers PHPStan, Psalm, RuboCop's todo file, ESLint bulk
 suppressions, and SonarQube in full — see
-[docs/prior-art.md](docs/prior-art.md) for their rows and sources.
+[docs/prior-art.md](https://github.com/YucelOzcan/pytest-ratchet/blob/master/docs/prior-art.md) for their rows and sources.
 
 Scanners like vulture, deptry, and knip are not competitors here — they are
 producers. The scanner finds; the ratchet keeps what it found justified,
@@ -135,13 +135,13 @@ frozen, and honest.
 
 - [x] Prior-art survey (betterer, semgrep/ruff/mypy baselines, import-linter,
       pytest-archon, deptry) — differences stated explicitly before any claim:
-      [docs/prior-art.md](docs/prior-art.md)
+      [docs/prior-art.md](https://github.com/YucelOzcan/pytest-ratchet/blob/master/docs/prior-art.md)
 - [x] Core primitive: justified allowlist + new-violation check + staleness
       check — `pytest_ratchet.core` + the `ratchet` fixture, with tests and CI
 - [x] `ratchet init` scaffolding (first integration: vulture) — append-only
       seeding, guard-test scaffold, self-checked output
 - [x] Resolver protocol + reachability guard recipes with a runnable example
-      project under [`examples/webapp`](examples/webapp) — candidates minus
+      project under [`examples/webapp`](https://github.com/YucelOzcan/pytest-ratchet/tree/master/examples/webapp) — candidates minus
       reachable, managed by the same baseline
 - [x] Own CI (tests + the example project, Python 3.11–3.13)
 - [ ] Docs, license, PyPI release
