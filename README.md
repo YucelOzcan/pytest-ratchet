@@ -11,19 +11,17 @@ carries a reason field that must be filled in — `TODO` is a legal value, but
 it is counted and reported on every run until someone replaces it — and an
 entry that no longer matches a real finding fails CI until it is removed.
 
-**Status: v0.1.0.** The core primitive, `ratchet init`, and the resolver
-protocol are complete and tested. It is committed in one production
+**Status: v0.1.0, on PyPI.** The core primitive, `ratchet init`, and the
+resolver protocol are complete and tested. It is committed in one production
 repository and green on developer machines, beside the hand-written guard it
 is meant to replace — but **skipped in that repository's CI** until the
-dependency can be pinned, which is the adoption trap described under Known
-limits below. Not yet on PyPI.
+dependency is pinned there, which is the adoption trap described under Known
+limits below.
 
 ## Quickstart
 
-Not on PyPI yet — install from the repository:
-
 ```
-pip install "pytest-ratchet[vulture] @ git+https://github.com/YucelOzcan/pytest-ratchet"
+pip install "pytest-ratchet[vulture]"
 ratchet init src/    # run vulture, seed ratchet-baseline.toml (reason = "TODO"),
                      # scaffold test_ratchet.py
 pytest               # from then on: new finding = red, stale baseline entry = red
