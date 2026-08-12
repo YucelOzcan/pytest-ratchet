@@ -10,6 +10,12 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = ["pytest>=7.4"]
 
+[project.optional-dependencies]
+vulture = ["vulture>=2.10"]
+
+[project.scripts]
+ratchet = "pytest_ratchet.cli:main"
+
 [project.entry-points.pytest11]
 ratchet = "pytest_ratchet.plugin"
 

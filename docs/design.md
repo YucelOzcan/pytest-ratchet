@@ -220,6 +220,29 @@ def test_dead_code(ratchet):
   plain argument.
 - Core stays pytest-free so the same primitive can back a CLI later.
 
+## ratchet init (v1, as implemented)
+
+`ratchet init <paths>` gives the 15-minute adoption path: run vulture, seed
+the baseline, scaffold the guard test.
+
+- **Append-only, mechanically.** Creates `ratchet-baseline.toml` (with a
+  header explaining the contract) or appends `[[vulture.entry]]` blocks for
+  findings not yet listed. It parses the existing file only to *read* it
+  (stdlib `tomllib`); writing is plain-text block append, so it cannot
+  reorder, reformat, or delete anything a human wrote — re-running init on a
+  covered project leaves the file byte-identical.
+- Seeds `reason = "TODO"` and `added = <today>`; real duplicates get
+  `count = N`.
+- **Never edits existing entries.** If a key already in the baseline now
+  occurs more often than its recorded count, init warns and leaves the entry
+  alone — accepting more debt is a human edit, even during seeding.
+- **Self-check:** after writing, init reloads the baseline through the same
+  strict loader pytest uses; init must never write a file that fails to load.
+- Scaffolds `test_ratchet.py` (vulture section, scanned paths baked in) only
+  if the file does not exist; refuses to touch an existing one.
+- A malformed existing baseline aborts init with the loader's error — seeding
+  into a broken file would bury the breakage.
+
 ## Out of scope for v1 (recorded so they're deliberate)
 
 - Pin-alignment checks (withdrawn 2026-08-10; not a ratchet).

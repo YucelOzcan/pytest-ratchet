@@ -13,13 +13,21 @@ entry that no longer matches a real finding fails CI until it is removed.
 
 **Status: work in progress — not yet released.**
 
-## Planned shape
+## Quickstart
+
+Not on PyPI yet — install from the repository:
 
 ```
-pip install pytest-ratchet
-ratchet init      # run a scanner, seed the baseline (each entry gets a reason: TODO)
-pytest            # from then on: new finding = red, stale baseline entry = red
+pip install "pytest-ratchet[vulture] @ git+https://github.com/YucelOzcan/pytest-ratchet"
+ratchet init src/    # run vulture, seed ratchet-baseline.toml (reason = "TODO"),
+                     # scaffold test_ratchet.py
+pytest               # from then on: new finding = red, stale baseline entry = red
 ```
+
+Every seeded entry starts as `reason = "TODO"`; each run reports how many
+TODOs remain and how old the oldest is. Replace them with real reasons at
+your own pace — or set `ratchet_strict_todo = true` in pytest config to
+force the issue.
 
 - On an existing project: your debt becomes visible, justified, and frozen —
   it can shrink, it cannot silently grow, and the list never goes stale.
@@ -78,7 +86,8 @@ frozen, and honest.
       [docs/prior-art.md](docs/prior-art.md)
 - [x] Core primitive: justified allowlist + new-violation check + staleness
       check — `pytest_ratchet.core` + the `ratchet` fixture, with tests and CI
-- [ ] `ratchet init` scaffolding (first integration: vulture)
+- [x] `ratchet init` scaffolding (first integration: vulture) — append-only
+      seeding, guard-test scaffold, self-checked output
 - [ ] Resolver protocol + reachability guard recipes with a runnable example
       project under `examples/`
 - [ ] Own CI, docs, PyPI release
