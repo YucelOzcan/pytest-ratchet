@@ -1,3 +1,4 @@
+from datetime import date
 from pathlib import Path
 
 from pytest_ratchet.cli import main
@@ -33,6 +34,20 @@ def test_init_seeds_baseline_and_scaffolds_test(tmp_path, monkeypatch, capsys):
     assert "wrote test_ratchet.py" in out
     assert str(tmp_path / "ratchet-baseline.toml") in out  # absolute path
     assert "rootdir" in out
+
+
+def test_init_added_date_can_be_set_for_inherited_baselines(tmp_path, monkeypatch):
+    make_project(tmp_path, monkeypatch)
+    assert main(["init", "src", "--added", "2026-06-27"]) == 0
+    entries = load_baseline(tmp_path / "ratchet-baseline.toml").sections["vulture"]
+    assert entries["src/mod.py::function::unused_function"].added == date(2026, 6, 27)
+
+
+def test_init_rejects_bad_added_date(tmp_path, monkeypatch, capsys):
+    make_project(tmp_path, monkeypatch)
+    assert main(["init", "src", "--added", "dün"]) == 1
+    assert "must be a date" in capsys.readouterr().err
+    assert not (tmp_path / "ratchet-baseline.toml").exists()
 
 
 def test_init_is_idempotent_and_append_only(tmp_path, monkeypatch, capsys):

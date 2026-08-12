@@ -42,6 +42,53 @@ force the issue.
 This tool does not fix your code quality. It does one thing: it keeps your
 baseline honest.
 
+## Proving the gate (read this before you trust it)
+
+A check you have never watched fail is a check you do not have. So after
+wiring a guard, prove it: introduce a violation on purpose, watch CI go red,
+then remove it.
+
+**The probe itself has a trap, and it is the same trap this tool exists to
+fight.** Scanners reason about your whole corpus, so an obvious probe can be
+silently absorbed. With vulture, adding `import json` to a file proves
+nothing: `json` is used elsewhere in the project, so vulture never reports
+it, the guard stays green, and you walk away believing you proved something.
+Use a name that cannot occur anywhere else:
+
+```python
+import json as _zzz_ratchet_probe   # unique name — vulture will report this
+```
+
+Then prove the other direction too, which most people forget: add a fake
+entry to the baseline for a finding that does not exist and confirm the run
+fails with STALE. A ratchet that only bites in one direction is half a
+ratchet, and the half that rots quietly is the one you didn't test.
+
+## Known limits
+
+Stated plainly, because a tool about honest records should keep an honest
+one about itself.
+
+- **No numeric budgets.** Entries are matched as a set: a finding is present
+  or absent. Baselines where each entry carries an allowed *number* — "this
+  function may be up to 208 lines", "at most 16 exceptions may exist" — are
+  not modeled, because exceeding a budget is neither a new finding nor a
+  stale one. If your debt is measured rather than enumerated, this tool
+  cannot hold it yet.
+- **Reasons live apart from the check.** The baseline is a separate file, so
+  a reviewer reading the guard's thresholds does not see the justifications
+  on the same screen. That separation is what makes the reasons survive
+  regeneration, but it is a real trade-off, not a free win.
+- **Adoption can force the very skip the tool forbids.** A guard fails rather
+  than skips when its scanner is missing — but while you are still evaluating
+  pytest-ratchet, before it is a pinned dependency, wrapping the guard in
+  `pytest.importorskip` is the practical move, and that guard then passes
+  silently in CI. If you must do it, make it deliberate and dated, and delete
+  it the moment the dependency is pinned.
+- **No `tag` on entries.** Teams often want to distinguish permanent accepted
+  patterns from temporary debt. Today the only machine-readable distinction
+  is `reason = "TODO"` versus a written reason.
+
 ## Prior art
 
 Baseline tools exist; most freeze debt in one direction only, and none of the

@@ -269,8 +269,42 @@ because only they know how their project resolves names.
   vulture entry is legitimately accepted while the resolver still finds the
   real problem.
 
+## Findings from first production dogfooding (2026-08-12)
+
+Ran against a real 238-module backend alongside its hand-written dead-code
+ratchet. The adapter reproduced the existing baseline exactly (5/5, no extra,
+no missing) and runtime was indistinguishable (1.60s vs 1.59s — both
+dominated by the vulture scan). What the exercise surfaced:
+
+- **The probe trap** (most important). Our own "prove the gate" advice walks
+  users into a silent green: a probe like `import json` is absorbed by
+  vulture's whole-corpus name analysis, so the guard stays green and the user
+  believes the gate was proven. Documented in README with the unique-name
+  fix. **A `ratchet probe` subcommand** — generate a corpus-unique name,
+  inject, verify red, revert — is the machine-checked version of that advice
+  and the natural v1.1 feature; it is deliberately not v1 because writing to
+  a user's source tree deserves its own design pass.
+- **`--added` shipped**: inherited baselines need the real acceptance date,
+  not today's, or the TODO-age report lies from day one.
+- **Numeric budgets are a genuine gap**: an entry carrying an allowed value
+  (max function length, cap on total entries) is a third class — neither new
+  nor stale, but *over budget*. One guard of the eleven in that project
+  cannot migrate because of it. Recorded as a known limit; if it ships it is
+  a separate verb, not a stretched set difference.
+- **Adoption forces a skip one level up**: before the plugin is a pinned
+  dependency, `pytest.importorskip` is the practical wrapper — and that makes
+  the guard pass silently, the exact thing the primitive forbids one layer
+  down. Concrete argument for prioritizing the PyPI release.
+- **Reasons now sit apart from the guard's thresholds**, unlike an inline
+  dict. A real trade-off of the file-based design, recorded rather than
+  argued away.
+- **Wanted: a `tag`/class field** on entries (permanent accepted pattern vs
+  temporary debt), which would let the summary report them separately.
+
 ## Out of scope for v1 (recorded so they're deliberate)
 
 - Pin-alignment checks (withdrawn 2026-08-10; not a ratchet).
 - Deadlines/expiry dates on entries, per-entry owners.
 - Any operation that edits the baseline besides `ratchet init` append.
+- Numeric budget entries and `ratchet probe` — both from dogfooding, both
+  v1.1 candidates, both listed in the README as current limits.

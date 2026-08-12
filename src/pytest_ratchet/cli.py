@@ -73,7 +73,17 @@ def _cmd_init(args: argparse.Namespace) -> int:
 
     existing = baseline.sections.get("vulture", {})
     actual = Counter(f.key for f in findings)
-    today = datetime.date.today()
+    if args.added:
+        try:
+            today = datetime.date.fromisoformat(args.added)
+        except ValueError:
+            print(
+                f"ratchet init: --added must be a date like 2026-08-09, got {args.added!r}",
+                file=sys.stderr,
+            )
+            return 1
+    else:
+        today = datetime.date.today()
 
     new_keys = sorted(key for key in actual if key not in existing)
     covered = len(actual) - len(new_keys)
@@ -172,6 +182,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--min-confidence", type=int, default=0, help="vulture minimum confidence (0-100)"
     )
     p_init.add_argument("--baseline", default="ratchet-baseline.toml")
+    p_init.add_argument(
+        "--added",
+        metavar="YYYY-MM-DD",
+        help=(
+            "date to stamp on seeded entries (default: today). Use the real "
+            "acceptance date when migrating an existing baseline, so the TODO "
+            "age report stays truthful."
+        ),
+    )
     p_init.add_argument(
         "--test-file",
         default="test_ratchet.py",
