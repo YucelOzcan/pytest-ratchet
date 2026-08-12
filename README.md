@@ -12,9 +12,11 @@ it is counted and reported on every run until someone replaces it — and an
 entry that no longer matches a real finding fails CI until it is removed.
 
 **Status: v0.1.0.** The core primitive, `ratchet init`, and the resolver
-protocol are complete and tested. It currently runs in one production
-repository alongside the hand-written guard it is meant to replace. Not yet
-on PyPI.
+protocol are complete and tested. It is committed in one production
+repository and green on developer machines, beside the hand-written guard it
+is meant to replace — but **skipped in that repository's CI** until the
+dependency can be pinned, which is the adoption trap described under Known
+limits below. Not yet on PyPI.
 
 ## Quickstart
 
