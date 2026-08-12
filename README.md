@@ -11,7 +11,10 @@ carries a reason field that must be filled in — `TODO` is a legal value, but
 it is counted and reported on every run until someone replaces it — and an
 entry that no longer matches a real finding fails CI until it is removed.
 
-**Status: work in progress — not yet released.**
+**Status: v0.1.0.** The core primitive, `ratchet init`, and the resolver
+protocol are complete and tested. It currently runs in one production
+repository alongside the hand-written guard it is meant to replace. Not yet
+on PyPI.
 
 ## Quickstart
 

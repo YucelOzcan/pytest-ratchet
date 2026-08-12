@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pytest-ratchet"
-version = "0.0.1.dev0"
+version = "0.1.0"
 description = "Baselines that cannot lie: every entry justified, new findings fail, stale entries fail."
 readme = "README.md"
 requires-python = ">=3.11"
