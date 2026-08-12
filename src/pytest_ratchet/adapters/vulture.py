@@ -37,9 +37,21 @@ def vulture_findings(
             "Install it: pip install vulture"
         ) from exc
 
+    missing = [str(p) for p in paths if not Path(p).exists()]
+    if missing:
+        raise ScannerUnavailableError(
+            "vulture cannot scan path(s) that do not exist: "
+            f"{', '.join(missing)} — a guard pointed at nothing would report "
+            "no findings and turn every baseline entry stale. Check the paths "
+            "(and the directory they are anchored on)."
+        )
+
     root_path = (Path(root) if root is not None else Path.cwd()).resolve()
     scanner = Vulture(verbose=False)
-    scanner.scavenge([str(p) for p in paths], exclude=list(exclude) or None)
+    try:
+        scanner.scavenge([str(p) for p in paths], exclude=list(exclude) or None)
+    except SystemExit as exc:  # vulture exits the process on unreadable input
+        raise ScannerUnavailableError(f"vulture failed to scan: {exc}") from exc
 
     findings: list[Finding] = []
     for item in scanner.get_unused_code(min_confidence=min_confidence):

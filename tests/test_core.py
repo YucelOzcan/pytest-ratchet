@@ -144,6 +144,13 @@ def test_empty_project_no_baseline_is_green(tmp_path):
     assert report.ok
 
 
+def test_generator_findings_are_consumed_once(tmp_path):
+    # The signature promises Iterable, and check() walks findings twice.
+    baseline = load_baseline(tmp_path / "ratchet-baseline.toml")
+    report = check("v", (finding(f"k{i}") for i in range(2)), baseline, today=TODAY)
+    assert [p.key for p in report.new] == ["k0", "k1"]
+
+
 def test_new_finding_fails(tmp_path):
     baseline = load_baseline(tmp_path / "ratchet-baseline.toml")
     report = check("v", [finding("a.py::function::f", message="unused function", line=7)], baseline, today=TODAY)

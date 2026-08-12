@@ -37,8 +37,9 @@ class Finding:
     """One normalized scanner finding.
 
     `key` is the identity used for matching (stable coordinates, '/'-separated
-    paths, no line numbers). `message` and `line` are display-only context and
-    never participate in matching.
+    paths, no line numbers). Everything else is display-only and never
+    participates in matching: `kind` groups findings in human-facing output,
+    `message` and `line` show where the finding currently sits.
     """
 
     kind: str
@@ -249,6 +250,7 @@ def check(
       baseline - findings  -> STALE (including count decay)
     """
     entries = baseline.sections.get(section, {})
+    findings = list(findings)  # the signature promises Iterable; we walk it twice
     actual = Counter(f.key for f in findings)
 
     context_by_key: dict[str, str] = {}

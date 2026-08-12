@@ -24,12 +24,15 @@ def test_init_seeds_baseline_and_scaffolds_test(tmp_path, monkeypatch, capsys):
     assert entry.added is not None
 
     scaffold = (tmp_path / "test_ratchet.py").read_text()
-    assert "vulture_findings(['src'])" in scaffold
-    assert 'ratchet.check("vulture"' in scaffold
+    assert "PATHS = ['src']" in scaffold
+    assert "HERE = Path(__file__).parent" in scaffold  # anchored, not cwd-relative
+    assert "ratchet.check(" in scaffold and '"vulture"' in scaffold
 
     out = capsys.readouterr().out
     assert "seeded 1 entries" in out
     assert "wrote test_ratchet.py" in out
+    assert str(tmp_path / "ratchet-baseline.toml") in out  # absolute path
+    assert "rootdir" in out
 
 
 def test_init_is_idempotent_and_append_only(tmp_path, monkeypatch, capsys):
@@ -92,6 +95,37 @@ def test_init_does_not_overwrite_existing_test_file(tmp_path, monkeypatch, capsy
     assert main(["init", "src"]) == 0
     assert (tmp_path / "test_ratchet.py").read_text() == "# custom guard, hands off\n"
     assert "left untouched" in capsys.readouterr().out
+
+
+def test_init_warns_when_pytest_rootdir_is_a_parent(tmp_path, monkeypatch, capsys):
+    """The monorepo trap: init seeds in backend/, pytest's rootdir is the repo
+    root, so the baseline would not be found. Say so, with the exact fix."""
+    (tmp_path / "pytest.ini").write_text("[pytest]\n")
+    backend = tmp_path / "backend"
+    (backend / "src").mkdir(parents=True)
+    (backend / "src" / "mod.py").write_text(DEAD_CODE)
+    monkeypatch.chdir(backend)
+
+    assert main(["init", "src"]) == 0
+    out = capsys.readouterr().out
+    assert "pytest.ini" in out and "rootdir" in out
+    assert "ratchet_baseline = backend/ratchet-baseline.toml" in out
+
+
+def test_scaffolded_guard_is_location_independent(pytester, monkeypatch, tmp_path):
+    """The scaffold must scan the right tree even when pytest is invoked from
+    somewhere else — it anchors on rootdir, not on the current directory."""
+    src = pytester.path / "src"
+    src.mkdir()
+    (src / "mod.py").write_text(DEAD_CODE)
+    pytester.makeini("[pytest]\n")  # pin rootdir to the project
+    assert main(["init", "src"]) == 0
+
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+    result = pytester.runpytest_subprocess(str(pytester.path))
+    result.assert_outcomes(passed=1)
 
 
 def test_init_end_to_end_with_pytest(pytester):

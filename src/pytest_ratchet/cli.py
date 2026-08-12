@@ -26,11 +26,21 @@ _FILE_HEADER = (
 
 _TEST_TEMPLATE = '''"""Ratchet guard: scanner findings vs the justified baseline."""
 
+from pathlib import Path
+
 from pytest_ratchet.adapters.vulture import vulture_findings
+
+# Anchored on this file's directory — the same place `ratchet init` seeded the
+# baseline from — so the guard scans the right tree and produces keys matching
+# the baseline no matter which directory pytest runs from.
+HERE = Path(__file__).parent
+PATHS = {paths!r}
 
 
 def test_vulture_ratchet(ratchet):
-    ratchet.check("vulture", vulture_findings({paths!r}))
+    ratchet.check(
+        "vulture", vulture_findings([HERE / p for p in PATHS], root=HERE)
+    )
 '''
 
 
@@ -100,7 +110,52 @@ def _cmd_init(args: argparse.Namespace) -> int:
             _TEST_TEMPLATE.format(paths=[str(p) for p in args.paths]), encoding="utf-8"
         )
         print(f"wrote {test_path} — run `pytest` to enforce the ratchet")
+
+    # The plugin reads the baseline from pytest's rootdir, which is not always
+    # the directory init ran in (monorepos, nested configs). Say so here
+    # rather than let the first pytest run look like a broken setup.
+    resolved = baseline_path.resolve()
+    print(f"\nbaseline: {resolved}")
+    outer = _pytest_config_above(resolved.parent)
+    if outer is not None:
+        print(
+            f"note: {outer} sits above this directory, so pytest's rootdir is "
+            f"probably {outer.parent} and it will not find this baseline.\n"
+            f"      Either run pytest from {resolved.parent}, or add to {outer}:\n"
+            f"          ratchet_baseline = "
+            f"{_relative(resolved, outer.parent)}"
+        )
+    else:
+        print(
+            "pytest reads it from its rootdir — run pytest from this directory, "
+            "or point it here with `ratchet_baseline` in your pytest config."
+        )
     return 0
+
+
+_PYTEST_CONFIG_NAMES = ("pytest.ini", "pyproject.toml", "tox.ini", "setup.cfg")
+
+
+def _pytest_config_above(start: Path) -> Path | None:
+    """The nearest pytest config in a *parent* directory, if any.
+
+    A config above us usually means pytest's rootdir is that directory, not
+    this one — the monorepo trap where init succeeds and the first pytest run
+    looks broken.
+    """
+    for parent in start.parents:
+        for name in _PYTEST_CONFIG_NAMES:
+            candidate = parent / name
+            if candidate.exists():
+                return candidate
+    return None
+
+
+def _relative(path: Path, base: Path) -> str:
+    try:
+        return path.relative_to(base).as_posix()
+    except ValueError:
+        return str(path)
 
 
 def main(argv: Sequence[str] | None = None) -> int:

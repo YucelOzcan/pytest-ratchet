@@ -24,6 +24,11 @@ ratchet init src/    # run vulture, seed ratchet-baseline.toml (reason = "TODO")
 pytest               # from then on: new finding = red, stale baseline entry = red
 ```
 
+Run `ratchet init` from the directory pytest treats as its rootdir — that is
+where the plugin looks for the baseline (init prints the path it wrote and
+reminds you). In a monorepo, either run pytest from that directory or point
+it at the file with `ratchet_baseline` in your pytest config.
+
 Every seeded entry starts as `reason = "TODO"`; each run reports how many
 TODOs remain and how old the oldest is. Replace them with real reasons at
 your own pace — or set `ratchet_strict_todo = true` in pytest config to
@@ -91,4 +96,5 @@ frozen, and honest.
 - [x] Resolver protocol + reachability guard recipes with a runnable example
       project under [`examples/webapp`](examples/webapp) — candidates minus
       reachable, managed by the same baseline
-- [ ] Own CI, docs, PyPI release
+- [x] Own CI (tests + the example project, Python 3.11–3.13)
+- [ ] Docs, license, PyPI release
