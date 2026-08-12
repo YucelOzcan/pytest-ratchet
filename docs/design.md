@@ -255,6 +255,16 @@ because only they know how their project resolves names.
   the runtime resolution actually reaches). `unreachable_findings(resolver)`
   turns `candidates - reachable` into ordinary `Finding`s, so the baseline
   manages them exactly like scanner output.
+- **Reachability is the special case, not the ceiling.** The general shape
+  the primitive serves is *two sources describing the same fact, and whether
+  they still agree*: code versus runtime resolution, directory versus
+  manifest, config versus what reads it. A resolver expresses that when the
+  disagreement is "exists but is never reached"; when it is a mismatched
+  property rather than an absence, skip the resolver and return `Finding`s
+  directly — the baseline does not care which produced them. The manifest
+  recipe in `examples/webapp` demonstrates all three: mirrored resolvers for
+  the two absence directions, and a plain function for the property
+  mismatch.
 - **Zero candidates is an error**, not an empty result: the usual cause is a
   wrong path or glob, and a guard that sees nothing guards nothing
   (no-silent-green). `allow_empty=True` opts out where genuinely valid.
@@ -304,6 +314,20 @@ dominated by the vulture scan). What the exercise surfaced:
   argued away.
 - **Wanted: a `tag`/class field** on entries (permanent accepted pattern vs
   temporary debt), which would let the summary report them separately.
+
+### Planned next migration (deferred on purpose)
+
+That project's provider-abstraction guard — the one-directional one, its
+`ALLOWED_EXCEPTIONS` a plain set with no staleness check — is portable:
+findings take the shape `<pipeline-file>::forbidden-import::<module>`, no
+numeric budget involved. Migrating it is not a port but a *repair*: the
+second direction arrives for free.
+
+It is deliberately **not** being done before the PyPI release. Until the
+plugin is a pinned dependency, the migrated guard must sit behind
+`pytest.importorskip` and would therefore skip silently in CI — trading a
+one-directional guard that *runs* for a bidirectional one that *doesn't*.
+A net loss, and exactly the adoption tension recorded in the README limits.
 
 ## Out of scope for v1 (recorded so they're deliberate)
 
