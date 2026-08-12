@@ -298,6 +298,12 @@ dominated by the vulture scan). What the exercise surfaced:
   target corpus for its candidate name and pick another if it occurs,
   because "this name is surely unique" is exactly the human intuition that
   failed. A random suffix alone is not enough; the search is the point.
+  **Second constraint, found by a stress test in the same project:** the
+  generated name must also not appear in any existing baseline entry. A probe
+  that reuses a recorded name can *remove* that finding — adding code in one
+  file made an unused import in another file stop being reported, and the run
+  failed with STALE instead of NEW. The probe must not be able to heal the
+  thing it is testing.
 - **`--added` shipped**: inherited baselines need the real acceptance date,
   not today's, or the TODO-age report lies from day one.
 - **Numeric budgets are a genuine gap**: an entry carrying an allowed value

@@ -12,11 +12,10 @@ it is counted and reported on every run until someone replaces it — and an
 entry that no longer matches a real finding fails CI until it is removed.
 
 **Status: v0.1.0, on PyPI.** The core primitive, `ratchet init`, and the
-resolver protocol are complete and tested. It is committed in one production
-repository and green on developer machines, beside the hand-written guard it
-is meant to replace — but **skipped in that repository's CI** until the
-dependency is pinned there, which is the adoption trap described under Known
-limits below.
+resolver protocol are complete and tested. It runs in one production
+repository's CI, backing two guards there: a dead-code ratchet beside the
+hand-written one it will replace, and an architecture rule that had an
+exception list but no staleness check until the migration gave it one.
 
 ## Quickstart
 
@@ -61,6 +60,15 @@ Use a name that cannot occur anywhere else:
 ```python
 import json as _zzz_ratchet_probe   # unique name — vulture will report this
 ```
+
+The same corpus-wide reasoning bites from the other side too, and this one
+is nastier because the probe *works*: code you add in one file can make an
+existing finding in a different file disappear, turning a healthy baseline
+entry stale. It has happened to us — a probe importing a name that was
+already recorded as an unused import elsewhere made that finding vanish, and
+the run failed with STALE instead of NEW. So a probe name must satisfy two
+conditions, not one: it must not occur anywhere in the corpus, **and** it
+must not be a name your baseline already has an entry for.
 
 Then prove the other direction too, which most people forget: add a fake
 entry to the baseline for a finding that does not exist and confirm the run
