@@ -8,7 +8,28 @@ version = "0.0.1.dev0"
 description = "Baselines that cannot lie: every entry justified, new findings fail, stale entries fail."
 readme = "README.md"
 requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["pytest", "baseline", "ratchet", "technical-debt", "dead-code", "ci"]
 dependencies = ["pytest>=7.4"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: Pytest",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Testing",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/YucelOzcan/pytest-ratchet"
+Source = "https://github.com/YucelOzcan/pytest-ratchet"
+Issues = "https://github.com/YucelOzcan/pytest-ratchet/issues"
 
 [project.optional-dependencies]
 vulture = ["vulture>=2.10"]
