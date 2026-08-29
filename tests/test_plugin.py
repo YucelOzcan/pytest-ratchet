@@ -139,7 +139,7 @@ def test_ticket_open_is_green_and_summarised(pytester):
     _ticket_project(pytester, "{'DAC-1': True}")
     result = pytester.runpytest()
     result.assert_outcomes(passed=1)
-    result.stdout.fnmatch_lines(["section [[]vulture[]]: 1 entry OK, 1 ticket checked"])
+    result.stdout.fnmatch_lines(["section [[]vulture[]]: 1 entry OK, 1 entry cites 1 ticket"])
 
 
 def test_ticket_closed_fails_the_test(pytester):
@@ -151,11 +151,36 @@ def test_ticket_closed_fails_the_test(pytester):
     )
 
 
-def test_ticket_unknown_is_visible_but_green_by_default(pytester):
+def test_ticket_unknown_is_visible_but_green_by_default(pytester, monkeypatch):
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
     _ticket_project(pytester, "{}")
     result = pytester.runpytest()
     result.assert_outcomes(passed=1)
-    result.stdout.fnmatch_lines(["*1 ticket checked (1 unresolved)*"])
+    result.stdout.fnmatch_lines(
+        [
+            "*1 entry cites 1 ticket (1 unresolved)*",
+            "  unresolved: a.py::function::f cites DAC-1 — stubbed",
+        ]
+    )
+    assert "::warning" not in result.stdout.str()
+
+
+def test_ticket_unknown_becomes_a_github_annotation_on_actions(pytester, monkeypatch):
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    _ticket_project(pytester, "{}")
+    result = pytester.runpytest()
+    result.assert_outcomes(passed=1)
+    result.stdout.fnmatch_lines(
+        ["::warning title=ratchet: 1 unresolved ticket in section [[]vulture[]]::DAC-1 could not be verified*"]
+    )
+
+
+def test_strict_red_run_has_no_annotation(pytester, monkeypatch):
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    _ticket_project(pytester, "{}", ini_extra="ratchet_ticket_strict = true\n")
+    result = pytester.runpytest()
+    result.assert_outcomes(failed=1)
+    assert "::warning" not in result.stdout.str()
 
 
 def test_ticket_unknown_is_red_under_strict_ini(pytester):

@@ -11,7 +11,7 @@ carries a reason field that must be filled in — `TODO` is a legal value, but
 it is counted and reported on every run until someone replaces it — and an
 entry that no longer matches a real finding fails CI until it is removed.
 
-**Status: v0.2.0, tagged on GitHub; PyPI carries v0.1.0.** The core primitive,
+**Status: v0.2.1, tagged on GitHub; PyPI carries v0.1.0.** The core primitive,
 `ratchet init`, the resolver protocol and reason liveness are complete and
 tested. It runs in one production
 repository's CI, backing two guards there: the dead-code gate, which ran
@@ -23,8 +23,8 @@ staleness check until the migration gave it one.
 
 ```
 pip install "pytest-ratchet[vulture]"        # v0.1.0 from PyPI
-# v0.2.0 (reason liveness) is installed from the tag for now:
-#   pip install "pytest-ratchet[vulture] @ git+https://github.com/YucelOzcan/pytest-ratchet@v0.2.0"
+# v0.2.1 (reason liveness) is installed from the tag for now:
+#   pip install "pytest-ratchet[vulture] @ git+https://github.com/YucelOzcan/pytest-ratchet@v0.2.1"
 ratchet init src/    # run vulture, seed ratchet-baseline.toml (reason = "TODO"),
                      # scaffold test_ratchet.py
 pytest               # from then on: new finding = red, stale baseline entry = red
@@ -118,11 +118,17 @@ prose, not a claim, and is ignored. Reasons that cite nothing are untouched;
 `^[A-Z][A-Z0-9]+-\d+`), and "closed" means the tracker's *completed* **or**
 *cancelled* — a cancelled ticket kills a reason just as thoroughly.
 
-When the tracker cannot answer — no credentials, network down, unknown id —
-the entry is **unresolved**: never guessed either way, always shown in the
-summary (`3 tickets checked (1 unresolved)`), and red only under
-`ratchet_ticket_strict`. Run it unstrict on laptops so an offline run still
-works, strict in CI so an outage cannot turn into a silent pass.
+Every green run says what was checked — `2 entries cite 1 ticket` — so a
+liveness check that quietly stopped running would be visible as a change in
+that line. When the tracker cannot answer — no credentials, network down,
+unknown id — the entry is **unresolved**: never guessed either way, named in
+the summary (`2 entries cite 1 ticket (1 unresolved)` plus one line per
+entry), and red only under `ratchet_ticket_strict`. On GitHub Actions an
+unstrict unresolved run also raises a `::warning::` annotation, so it shows
+on the job page instead of only in the log. Run unstrict on laptops so an
+offline run still works; in CI, decide whether a tracker outage should be
+red (`strict`) or a warning you watch — a self-hosted tracker on one VM is a
+reason to start with the warning.
 
 Trackers are plugins: anything with `is_open(ticket_id) -> bool | None`
 (optionally `explain(ticket_id) -> str` for the report), built by the

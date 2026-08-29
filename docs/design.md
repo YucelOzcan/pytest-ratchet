@@ -374,6 +374,12 @@ reference implementation for this feature.
 - Core stays dependency-free; `adapters/plane.py` is stdlib `urllib`.
   Configuration precedence: constructor arguments, then `PLANE_BASE_URL` /
   `PLANE_API_KEY` / `PLANE_WORKSPACE_SLUG`.
+- The summary line names the shape of the check, not just a count:
+  `2 entries cite 1 ticket` (v0.2.1, after the first production run showed
+  "1 ticket checked" for two entries and read as if one was skipped). Unstrict
+  unresolved tickets are listed one per line under the summary and, on GitHub
+  Actions, raised as a `::warning::` annotation — a warning that only lives
+  in a log is a warning nobody reads.
 - Without `ratchet_ticket_tracker` nothing changes: no request, no new
   summary text, byte-identical reports. Misconfiguration of the tracker
   (bad `module:callable`, object without `is_open`) fails the test loudly —

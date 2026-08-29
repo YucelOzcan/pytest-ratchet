@@ -206,6 +206,7 @@ class Report:
     # v0.2 — reason liveness. Defaults keep Report constructible as before.
     tickets_enabled: bool = False
     tickets_checked: int = 0  # distinct tickets asked of the tracker
+    citing_entries: int = 0  # entries whose reason cites at least one ticket
     closed_tickets: tuple[ClosedTicketProblem, ...] = ()
     unresolved_tickets: tuple[UnresolvedTicket, ...] = ()
     strict_tickets: bool = False
@@ -230,8 +231,14 @@ class Report:
             if self.todo_oldest_days is not None:
                 line += f" (oldest: {self.todo_oldest_days} days)"
         if self.tickets_enabled:
-            n = self.tickets_checked
-            line += f", {n} ticket{'' if n == 1 else 's'} checked"
+            if self.citing_entries == 0:
+                line += ", no entries cite tickets"
+            else:
+                e, t = self.citing_entries, self.tickets_checked
+                line += (
+                    f", {e} entr{'y cites' if e == 1 else 'ies cite'} "
+                    f"{t} ticket{'' if t == 1 else 's'}"
+                )
             if self.unresolved_tickets:
                 line += f" ({len(self.unresolved_tickets)} unresolved)"
         return line
@@ -370,12 +377,15 @@ def check(
     closed: list[ClosedTicketProblem] = []
     unresolved: list[UnresolvedTicket] = []
     asked: set[str] = set()
+    citing = 0
     if tracker is not None:
         regex = compile_ticket_pattern(ticket_pattern)
         cache = TicketStatusCache(tracker)
         for key in sorted(entries):
             entry = entries[key]
-            for ticket in cited_tickets(entry.reason, regex):
+            cited = cited_tickets(entry.reason, regex)
+            citing += 1 if cited else 0
+            for ticket in cited:
                 asked.add(ticket)
                 status = cache.is_open(ticket)
                 if status is None:
@@ -397,6 +407,7 @@ def check(
         strict_todo=strict_todo,
         tickets_enabled=tracker is not None,
         tickets_checked=len(asked),
+        citing_entries=citing,
         closed_tickets=tuple(closed),
         unresolved_tickets=tuple(unresolved),
         strict_tickets=strict_tickets,

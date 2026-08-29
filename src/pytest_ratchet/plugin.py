@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import inspect
+import os
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -13,6 +14,7 @@ from pytest_ratchet import core
 from pytest_ratchet.tickets import DEFAULT_TICKET_PATTERN, TicketPatternError
 
 _SUMMARIES = pytest.StashKey[list]()
+_REPORTS = pytest.StashKey[list]()
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -56,6 +58,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 def pytest_configure(config: pytest.Config) -> None:
     config.stash[_SUMMARIES] = []
+    config.stash[_REPORTS] = []
 
 
 class Ratchet:
@@ -154,6 +157,7 @@ class Ratchet:
         if not report.ok:
             pytest.fail(report.render(), pytrace=False)
         self._config.stash[_SUMMARIES].append(report.summary_line())
+        self._config.stash[_REPORTS].append(report)
         return report
 
 
@@ -162,11 +166,54 @@ def ratchet(request: pytest.FixtureRequest) -> Ratchet:
     return Ratchet(request.config)
 
 
+def _unresolved_lines(report: core.Report) -> list[str]:
+    """One line per unresolved ticket on a green (non-strict) report.
+
+    Under strict the run is already red and render() has said why; without
+    strict, the summary count alone is easy to skim past — name them.
+    """
+    if report.strict_tickets or not report.unresolved_tickets:
+        return []
+    out = []
+    for u in report.unresolved_tickets:
+        line = f"  unresolved: {u.key} cites {u.ticket}"
+        if u.detail:
+            line += f" — {u.detail}"
+        out.append(line)
+    return out
+
+
+def _github_annotation(report: core.Report) -> str | None:
+    """GitHub Actions turns a '::warning::' stdout line into a visible annotation.
+
+    Emitted only when the runner says it is GitHub (GITHUB_ACTIONS=true), so
+    local output stays clean.
+    """
+    if os.environ.get("GITHUB_ACTIONS") != "true":
+        return None
+    if report.strict_tickets or not report.unresolved_tickets:
+        return None
+    tickets = sorted({u.ticket for u in report.unresolved_tickets})
+    n, e = len(tickets), len(report.unresolved_tickets)
+    return (
+        f"::warning title=ratchet: {n} unresolved ticket{'' if n == 1 else 's'} "
+        f"in section [{report.section}]::{', '.join(tickets)} could not be verified "
+        f"for {e} entr{'y' if e == 1 else 'ies'} (tracker unreachable or ticket "
+        "unknown); the run stayed green because ratchet_ticket_strict is off"
+    )
+
+
 def pytest_terminal_summary(
     terminalreporter, exitstatus: int, config: pytest.Config
 ) -> None:
     lines = config.stash.get(_SUMMARIES, [])
+    reports = config.stash.get(_REPORTS, [])
     if lines:
         terminalreporter.section("ratchet")
-        for line in lines:
+        for line, report in zip(lines, reports):
             terminalreporter.write_line(line)
+            for extra in _unresolved_lines(report):
+                terminalreporter.write_line(extra)
+            annotation = _github_annotation(report)
+            if annotation:
+                terminalreporter.write_line(annotation)

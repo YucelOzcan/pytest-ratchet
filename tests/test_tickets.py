@@ -105,7 +105,7 @@ def test_open_ticket_is_green_and_counted(tmp_path):
     report = check("vulture", findings("a.py::import::x"), b, tracker=tracker)
     assert report.ok
     assert report.tickets_enabled and report.tickets_checked == 1
-    assert report.summary_line() == "section [vulture]: 1 entry OK, 1 ticket checked"
+    assert report.summary_line() == "section [vulture]: 1 entry OK, 1 entry cites 1 ticket"
 
 
 def test_closed_ticket_is_red_with_the_three_way_hint(tmp_path):
@@ -135,7 +135,7 @@ def test_unknown_is_counted_not_red_by_default(tmp_path):
     assert report.ok
     assert len(report.unresolved_tickets) == 1
     assert report.unresolved_tickets[0].detail == "HTTP 503"
-    assert report.summary_line() == "section [vulture]: 1 entry OK, 1 ticket checked (1 unresolved)"
+    assert report.summary_line() == "section [vulture]: 1 entry OK, 1 entry cites 1 ticket (1 unresolved)"
 
 
 def test_unknown_is_red_under_strict(tmp_path):
@@ -162,6 +162,8 @@ def test_each_ticket_is_asked_once_per_check(tmp_path):
     )
     assert sorted(tracker.asked) == ["DAC-1", "DAC-2"]
     assert report.tickets_checked == 2
+    assert report.citing_entries == 3
+    assert report.summary_line().endswith("3 entries OK, 3 entries cite 2 tickets")
     assert [p.key for p in report.closed_tickets] == ["c.py::import::z"]
 
 
@@ -177,6 +179,7 @@ def test_prose_mentions_are_not_checked(tmp_path):
     tracker = FakeTracker({"DAC-1": False})
     report = check("vulture", findings("a.py::import::x"), b, tracker=tracker)
     assert report.ok and tracker.asked == [] and report.tickets_checked == 0
+    assert report.summary_line() == "section [vulture]: 1 entry OK, no entries cite tickets"
 
 
 def test_closed_ticket_and_stale_entry_are_both_reported(tmp_path):
