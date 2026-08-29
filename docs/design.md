@@ -383,6 +383,13 @@ reference implementation for this feature.
 **Deferred, on purpose.** A `ratchet tickets` CLI (list and verify every
 cited ticket outside pytest) — cheap, low value until a second adapter
 exists. A GitHub Issues adapter — next, same protocol. Jira — not planned.
+**v0.3 candidate — self-justified findings** (from the dogfooding project,
+2026-08-29): a fixture case marked `xfail: "DAC-355"` already carries its
+ticket and its note, so a baseline entry for it is a second copy of the same
+fact, edited in two files on every change. When a `Finding` carries its own
+reason, the ratchet should need no entry and run only the liveness check.
+That is the natural shape of every fixture-based ratchet; the set-difference
+model stays for findings that cannot justify themselves.
 Commit- and PR-level gates ("a bug-labelled ticket cannot close without a
 repro") belong to the project, not to a test-time baseline tool.
 
