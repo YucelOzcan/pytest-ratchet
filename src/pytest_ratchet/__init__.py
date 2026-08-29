@@ -10,6 +10,7 @@ from pytest_ratchet.core import (
     load_baseline,
 )
 from pytest_ratchet.resolve import Resolver, ResolverError, unreachable_findings
+from pytest_ratchet.tickets import TicketTracker, cited_tickets
 
 __all__ = [
     "Baseline",
@@ -19,7 +20,9 @@ __all__ = [
     "Report",
     "Resolver",
     "ResolverError",
+    "TicketTracker",
     "check",
+    "cited_tickets",
     "load_baseline",
     "unreachable_findings",
 ]

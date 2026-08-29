@@ -335,7 +335,58 @@ plugin is a pinned dependency, the migrated guard must sit behind
 one-directional guard that *runs* for a bidirectional one that *doesn't*.
 A net loss, and exactly the adoption tension recorded in the README limits.
 
-## Out of scope for v1 (recorded so they're deliberate)
+## Reason liveness — CLOSED_TICKET (v0.2, as implemented)
+
+**The gap.** A reason that cites a ticket ("DAC-355: fix once the parser
+grows") is a claim about a tracker. It goes false when the ticket closes,
+and neither direction of the set difference can see it: the finding is still
+present (not NEW), the entry is still present (not STALE). Field evidence
+(2026-08-29, the dogfooding project): a ticket was set Done on 2026-08-08
+without a fix; the cases it justified stayed accepted for three weeks; only a
+hand-written test that asked the tracker caught it. That test was the
+reference implementation for this feature.
+
+**Shape.** A third question in `core.check`, behind a `tracker` argument:
+
+- `TicketTracker` protocol, one method: `is_open(ticket_id) -> bool | None`.
+  Named *tracker*, not *resolver* — `Resolver` already means reachability.
+  Optional, display-only `explain(ticket_id) -> str`.
+- Convention: tickets are cited by the **leading** ids of the reason —
+  `DAC-355: …` or `DAC-355, DAC-360: …` (all must be open). Ids elsewhere in
+  the text are prose. The pattern (`ratchet_ticket_pattern`) is anchored at
+  the start even if the user forgets the `^`; an unanchored pattern would
+  turn every mention into a claim.
+- Closed = tracker group *completed* **or** *cancelled*; the report says
+  which (`state Done (completed)`), because the fix differs: reopen, or fix
+  the debt and delete the entry, or point the reason at a live ticket. That
+  three-way hint is printed with every CLOSED_TICKET.
+- `None` (no credentials, network, unknown id) is **unresolved**: never a
+  guess in either direction, counted in the summary line, red only under
+  `ratchet_ticket_strict`. Rationale: an offline laptop run must not break;
+  a CI run must not turn an outage into a pass. Same doctrine as "scanner
+  missing = fail, never skip", applied one notch softer because the tracker
+  is a network dependency the scanner is not.
+- One tracker call per ticket per check (several entries often cite one
+  ticket); the Plane adapter additionally caches items and per-project state
+  lists across checks. Default timeout 10 s, configurable
+  (`ratchet_ticket_timeout`, passed to factories that accept `timeout`): a
+  GitHub runner talking to a self-hosted Plane timed out at 3 s in the field.
+- Core stays dependency-free; `adapters/plane.py` is stdlib `urllib`.
+  Configuration precedence: constructor arguments, then `PLANE_BASE_URL` /
+  `PLANE_API_KEY` / `PLANE_WORKSPACE_SLUG`.
+- Without `ratchet_ticket_tracker` nothing changes: no request, no new
+  summary text, byte-identical reports. Misconfiguration of the tracker
+  (bad `module:callable`, object without `is_open`) fails the test loudly —
+  a tracker that silently does not exist would be a check that silently does
+  not run.
+
+**Deferred, on purpose.** A `ratchet tickets` CLI (list and verify every
+cited ticket outside pytest) — cheap, low value until a second adapter
+exists. A GitHub Issues adapter — next, same protocol. Jira — not planned.
+Commit- and PR-level gates ("a bug-labelled ticket cannot close without a
+repro") belong to the project, not to a test-time baseline tool.
+
+## Out of scope (recorded so they're deliberate)
 
 - Pin-alignment checks (withdrawn 2026-08-10; not a ratchet).
 - Deadlines/expiry dates on entries, per-entry owners.

@@ -13,6 +13,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+from pytest_ratchet.tickets import (
+    DEFAULT_TICKET_PATTERN,
+    TicketStatusCache,
+    TicketTracker,
+    cited_tickets,
+    compile_ticket_pattern,
+)
+
 TODO_REASON = "TODO"
 
 _ENTRY_FIELDS = {"key", "reason", "count", "added"}
@@ -163,6 +171,28 @@ class StaleProblem:
 
 
 @dataclass(frozen=True)
+class ClosedTicketProblem:
+    """The reason cites a ticket the tracker says is closed. The finding is
+    still there and the entry is still there, so NEW/STALE cannot see it —
+    but the record claims "tracked" while the tracker says "done"."""
+
+    key: str
+    ticket: str
+    reason: str
+    detail: str | None  # display-only, from the tracker ("state Done (completed)")
+
+
+@dataclass(frozen=True)
+class UnresolvedTicket:
+    """The tracker could not answer for this ticket (no credentials, network,
+    unknown id). Counted and shown; red only under strict_tickets."""
+
+    key: str
+    ticket: str
+    detail: str | None
+
+
+@dataclass(frozen=True)
 class Report:
     section: str
     baseline_path: Path
@@ -173,11 +203,18 @@ class Report:
     todo_keys: tuple[str, ...]
     todo_oldest_days: int | None
     strict_todo: bool
+    # v0.2 — reason liveness. Defaults keep Report constructible as before.
+    tickets_enabled: bool = False
+    tickets_checked: int = 0  # distinct tickets asked of the tracker
+    closed_tickets: tuple[ClosedTicketProblem, ...] = ()
+    unresolved_tickets: tuple[UnresolvedTicket, ...] = ()
+    strict_tickets: bool = False
 
     @property
     def problem_count(self) -> int:
         todo = len(self.todo_keys) if self.strict_todo else 0
-        return len(self.new) + len(self.stale) + todo
+        unresolved = len(self.unresolved_tickets) if self.strict_tickets else 0
+        return len(self.new) + len(self.stale) + todo + len(self.closed_tickets) + unresolved
 
     @property
     def ok(self) -> bool:
@@ -192,6 +229,11 @@ class Report:
             line += f", {len(self.todo_keys)} TODO"
             if self.todo_oldest_days is not None:
                 line += f" (oldest: {self.todo_oldest_days} days)"
+        if self.tickets_enabled:
+            n = self.tickets_checked
+            line += f", {n} ticket{'' if n == 1 else 's'} checked"
+            if self.unresolved_tickets:
+                line += f" ({len(self.unresolved_tickets)} unresolved)"
         return line
 
     def render(self) -> str:
@@ -225,6 +267,31 @@ class Report:
             for key in self.todo_keys:
                 lines.append(f"    {key}")
 
+        if self.closed_tickets:
+            lines.append("")
+            lines.append(
+                "  CLOSED_TICKET (reason cites a closed ticket — reopen the ticket, "
+                "or fix the debt and delete the entry, or point the reason at a live ticket):"
+            )
+            for p in self.closed_tickets:
+                detail = f"    {p.key}   {p.ticket} is closed"
+                if p.detail:
+                    detail += f" ({p.detail})"
+                lines.append(detail)
+                lines.append(f'      reason was: "{p.reason}"')
+
+        if self.strict_tickets and self.unresolved_tickets:
+            lines.append("")
+            lines.append(
+                "  UNRESOLVED_TICKET (strict_tickets is enabled — the tracker could not "
+                "answer; fix the tracker access or the ticket id):"
+            )
+            for u in self.unresolved_tickets:
+                detail = f"    {u.key}   {u.ticket}"
+                if u.detail:
+                    detail += f"   ({u.detail})"
+                lines.append(detail)
+
         if self.baseline_missing and self.new:
             lines.append("")
             lines.append(
@@ -242,12 +309,21 @@ def check(
     *,
     strict_todo: bool = False,
     today: datetime.date | None = None,
+    tracker: TicketTracker | None = None,
+    ticket_pattern: str = DEFAULT_TICKET_PATTERN,
+    strict_tickets: bool = False,
 ) -> Report:
     """Compare live findings against one baseline section.
 
     Set semantics with exact counts, both directions red:
       findings - baseline  -> NEW
       baseline - findings  -> STALE (including count decay)
+
+    With a `tracker`, a third direction (v0.2): every ticket a reason cites
+    (leading ids only, see pytest_ratchet.tickets) is asked of the tracker.
+      closed  -> CLOSED_TICKET (red)
+      unknown -> counted and shown; red only with strict_tickets
+    Without a tracker this block does not run and the report is unchanged.
     """
     entries = baseline.sections.get(section, {})
     findings = list(findings)  # the signature promises Iterable; we walk it twice
@@ -291,6 +367,24 @@ def check(
         reference = today if today is not None else datetime.date.today()
         todo_oldest_days = max((reference - d).days for d in dated)
 
+    closed: list[ClosedTicketProblem] = []
+    unresolved: list[UnresolvedTicket] = []
+    asked: set[str] = set()
+    if tracker is not None:
+        regex = compile_ticket_pattern(ticket_pattern)
+        cache = TicketStatusCache(tracker)
+        for key in sorted(entries):
+            entry = entries[key]
+            for ticket in cited_tickets(entry.reason, regex):
+                asked.add(ticket)
+                status = cache.is_open(ticket)
+                if status is None:
+                    unresolved.append(UnresolvedTicket(key, ticket, cache.explain(ticket)))
+                elif status is False:
+                    closed.append(
+                        ClosedTicketProblem(key, ticket, entry.reason, cache.explain(ticket))
+                    )
+
     return Report(
         section=section,
         baseline_path=baseline.path,
@@ -301,4 +395,9 @@ def check(
         todo_keys=todo_keys,
         todo_oldest_days=todo_oldest_days,
         strict_todo=strict_todo,
+        tickets_enabled=tracker is not None,
+        tickets_checked=len(asked),
+        closed_tickets=tuple(closed),
+        unresolved_tickets=tuple(unresolved),
+        strict_tickets=strict_tickets,
     )

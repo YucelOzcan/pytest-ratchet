@@ -11,11 +11,12 @@ carries a reason field that must be filled in — `TODO` is a legal value, but
 it is counted and reported on every run until someone replaces it — and an
 entry that no longer matches a real finding fails CI until it is removed.
 
-**Status: v0.1.0, on PyPI.** The core primitive, `ratchet init`, and the
-resolver protocol are complete and tested. It runs in one production
-repository's CI, backing two guards there: a dead-code ratchet beside the
-hand-written one it will replace, and an architecture rule that had an
-exception list but no staleness check until the migration gave it one.
+**Status: v0.2.0 on main (v0.1.0 on PyPI).** The core primitive, `ratchet init`,
+the resolver protocol and reason liveness are complete and tested. It runs in one production
+repository's CI, backing two guards there: the dead-code gate, which ran
+beside the hand-written test it replaced until that test was retired on
+2026-08-29, and an architecture rule that had an exception list but no
+staleness check until the migration gave it one.
 
 ## Quickstart
 
@@ -75,6 +76,61 @@ entry to the baseline for a finding that does not exist and confirm the run
 fails with STALE. A ratchet that only bites in one direction is half a
 ratchet, and the half that rots quietly is the one you didn't test.
 
+If you enabled a ticket tracker (next section), prove that direction as
+well: write a reason that cites a ticket you *know* is closed, watch the run
+fail with CLOSED_TICKET, then put it back. And once, deliberately, run with
+the tracker's credentials missing: without `ratchet_ticket_strict` the
+summary must say `unresolved`, with it the run must go red. A liveness check
+you have never seen fail on a dead ticket is a check you do not have.
+
+## Reason liveness: tickets that closed behind your back
+
+Most reasons point at a ticket: `DAC-355: fix once the parser grows`. That is
+a claim about the tracker, and it can go false without anything in the code
+changing — the ticket gets closed, the finding stays, the entry stays. NEW
+cannot see it, STALE cannot see it, and the baseline now says "tracked"
+while the tracker says "done". Nobody lied; the record is still wrong.
+
+Give the ratchet a tracker and it asks a third question on every run: *is
+the cited ticket still open?*
+
+```ini
+# pytest.ini / pyproject [tool.pytest.ini_options]
+ratchet_ticket_tracker = pytest_ratchet.adapters.plane:PlaneTracker
+ratchet_ticket_strict = true        # in CI: "could not tell" is red, not green
+```
+
+```
+  CLOSED_TICKET (reason cites a closed ticket — reopen the ticket, or fix the
+  debt and delete the entry, or point the reason at a live ticket):
+    src/pbx/handlers.py::function::on_hangup   DAC-355 is closed (state Done (completed))
+      reason was: "DAC-355: fix once the parser grows"
+```
+
+The convention is deliberately narrow: a reason cites tickets by **starting**
+with one or more ids — `DAC-355: ...` or `DAC-355, DAC-360: ...` (every id
+in the list must be open). An id later in the text (`kept — see DAC-355`) is
+prose, not a claim, and is ignored. Reasons that cite nothing are untouched;
+`TODO` stays `TODO`. The id shape is `ratchet_ticket_pattern` (default
+`^[A-Z][A-Z0-9]+-\d+`), and "closed" means the tracker's *completed* **or**
+*cancelled* — a cancelled ticket kills a reason just as thoroughly.
+
+When the tracker cannot answer — no credentials, network down, unknown id —
+the entry is **unresolved**: never guessed either way, always shown in the
+summary (`3 tickets checked (1 unresolved)`), and red only under
+`ratchet_ticket_strict`. Run it unstrict on laptops so an offline run still
+works, strict in CI so an outage cannot turn into a silent pass.
+
+Trackers are plugins: anything with `is_open(ticket_id) -> bool | None`
+(optionally `explain(ticket_id) -> str` for the report), built by the
+`module:callable` named in `ratchet_ticket_tracker`; factories that accept a
+`timeout` argument receive `ratchet_ticket_timeout` (default 10 s — a
+GitHub runner talking to a self-hosted tracker needs more than you think).
+One adapter ships today, [Plane](https://plane.so)
+(`PLANE_BASE_URL`, `PLANE_API_KEY`, `PLANE_WORKSPACE_SLUG`; stdlib only,
+one request per ticket, state lists cached per project). A GitHub Issues
+adapter is next; writing your own is a dozen lines.
+
 ## Known limits
 
 Stated plainly, because a tool about honest records should keep an honest
@@ -99,6 +155,11 @@ one about itself.
 - **No `tag` on entries.** Teams often want to distinguish permanent accepted
   patterns from temporary debt. Today the only machine-readable distinction
   is `reason = "TODO"` versus a written reason.
+- **Ticket liveness only sees what the reason claims.** A ticket named in
+  the middle of a sentence is not checked, by design; an unreachable tracker
+  is a visible *unresolved*, not a failure, unless you turn on
+  `ratchet_ticket_strict`. And "open" is all it asks — a ticket that is open
+  but abandoned is a question for people, not for a plugin.
 
 ## Prior art
 
