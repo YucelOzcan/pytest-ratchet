@@ -1,13 +1,13 @@
 name: Release
 
 # Publishes to PyPI via Trusted Publishing (OIDC) — no API token is ever
-# created, stored, or pasted anywhere. Trigger it by hand from the Actions
-# tab, or by pushing a v* tag.
+# created, stored, or pasted anywhere. Manual only, by design: a v* tag is a
+# release of the *repository* (installable from the tag), and putting a
+# version on PyPI is a separate, deliberate act from the Actions tab.
+# PyPI cannot un-publish a version number, so nothing here runs on push.
 
 on:
   workflow_dispatch:
-  push:
-    tags: ["v*"]
 
 jobs:
   test:

@@ -11,8 +11,9 @@ carries a reason field that must be filled in — `TODO` is a legal value, but
 it is counted and reported on every run until someone replaces it — and an
 entry that no longer matches a real finding fails CI until it is removed.
 
-**Status: v0.2.0 on main (v0.1.0 on PyPI).** The core primitive, `ratchet init`,
-the resolver protocol and reason liveness are complete and tested. It runs in one production
+**Status: v0.2.0, tagged on GitHub; PyPI carries v0.1.0.** The core primitive,
+`ratchet init`, the resolver protocol and reason liveness are complete and
+tested. It runs in one production
 repository's CI, backing two guards there: the dead-code gate, which ran
 beside the hand-written test it replaced until that test was retired on
 2026-08-29, and an architecture rule that had an exception list but no
@@ -21,7 +22,9 @@ staleness check until the migration gave it one.
 ## Quickstart
 
 ```
-pip install "pytest-ratchet[vulture]"
+pip install "pytest-ratchet[vulture]"        # v0.1.0 from PyPI
+# v0.2.0 (reason liveness) is installed from the tag for now:
+#   pip install "pytest-ratchet[vulture] @ git+https://github.com/YucelOzcan/pytest-ratchet@v0.2.0"
 ratchet init src/    # run vulture, seed ratchet-baseline.toml (reason = "TODO"),
                      # scaffold test_ratchet.py
 pytest               # from then on: new finding = red, stale baseline entry = red
