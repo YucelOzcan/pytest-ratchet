@@ -399,6 +399,89 @@ model stays for findings that cannot justify themselves.
 Commit- and PR-level gates ("a bug-labelled ticket cannot close without a
 repro") belong to the project, not to a test-time baseline tool.
 
+## Migrating hand-written guards (2026-08-29 → 2026-10-12)
+
+The dogfooding project had three hand-written reachability guards — settings
+fields, prompt templates, data files — each with its own allowlist and each
+passing known orphans with `pytest.skip`. All three were migrated the same
+way: the new section runs **beside** the old test (parallel phase), parity is
+recorded (same verdicts, same orphans), then the old test is retired. A
+fourth guard (config files) was deliberately not migrated: its allowlist was
+empty and the rest of its tests are structural, so a port would have been
+ceremony.
+
+- **Parity held everywhere.** Settings: 210 fields, the same 4 orphans.
+  Templates: 29 files, no verdict differences, empty section. Data: 295
+  files, the same 6 orphans, 2 known ungenerated audio steps. Retiring the
+  old tests removed every `pytest.skip` they contributed to the CI summary —
+  the skip-as-silent-gate the primitive exists to replace.
+- **The parallel phase has a price, and it was paid.** The retirement
+  threshold was "7 days or 3 real changes to the source, whichever first"
+  (14 days for data). It was overrun by weeks because no one was watching it;
+  in the meantime the code gained a new directory tier, the migrated section
+  was taught it in the same change, and the old twin turned CI red and needed
+  a separate fix. Two guards for one fact means two edits for every change.
+  Lesson: a retirement threshold is a date someone has to look at, not a
+  trigger — schedule the check when the parallel phase starts.
+- **Retire means shrink, not always delete.** Checks that are not set
+  differences stay plain tests: the data guard kept its stale-artifact and
+  cache-directory hygiene checks (305 → 46 lines), importing helpers from the
+  migrated file so the pattern rules live in one copy. The template guard
+  kept its "literal references still in code" health check.
+- **A half-reverted probe failed as a format error**, not as a pass. That is
+  the right failure: a malformed baseline is red before it is anything else.
+
+## Case: stacking rules blinded a scanner (2026-10-12)
+
+**Symptom.** In the dogfooding project, a service branched on customer
+identity — `if schema_id == SchemaId.CUSTOMER_B: … else: …` — and no guard
+noticed. A second function did the same against a domain constant.
+
+**Root cause.** Two rules, both enforced. One forbids hard-coding tenant
+identity and is checked by scanning string literals. The other says "use an
+enum or a named constant, never a literal". Code that obeys the second rule
+carries no literal, so the first rule's scanner cannot see it. Following one
+rule blinded the other's check. Separately, the scanner's list of tenant
+names was kept by hand; when a new customer's directory tree was added the
+list was not updated, so even literals of the new names went unseen.
+
+**Why nothing caught it.** The literal guard keeps a *count per file* — a
+numeric budget, which is why it never moved to pytest-ratchet and stayed a
+hand-written test. Its vocabulary was a hand-kept list, and nothing tied
+that list to the directory tree that defines tenants.
+
+**The guard.** A new section, producer kept in the project (no plugin change
+was needed):
+
+- Finding = a comparison (`==`, `!=`, `in`, `not in`, `is`, `is not`) or a
+  `match/case` pattern whose operand resolves to a tenant-identity symbol;
+  `str(X)`, `X.value` and tuple/list/set operands are unwrapped. Registry
+  lookups (`SCHEMAS[x]`), dict keys and defaults are not comparisons and stay
+  free, so the pattern the project wants is the one the guard rewards.
+- The symbol set is **derived**, not listed: the string constants of the
+  module that defines domains, plus every member of the identity enums. A
+  new constant joins automatically.
+- Key `path::qualname::Symbol` — no line number, set semantics (two
+  comparisons against one symbol in one function are one key). Designed as a
+  set from day one so it fits the primitive, unlike the guard it complements.
+- Literal comparisons stay with the literal guard, so one violation is not
+  booked twice.
+- The literal list is now checked against the tenant directory tree: a name
+  in the tree but not in the list is red. It found four missing names on its
+  first run.
+
+**What it catches today.** Two branches, both accepted with a reason that
+cites the open refactor ticket — so the entries die with the ticket (reason
+liveness). Probed in all three directions: NEW, STALE and CLOSED_TICKET red;
+probe name verified absent from the corpus and the baseline first.
+
+**Epilogue.** One gap was left open on purpose: an enum's *value* written as
+a literal (`== "customer_b_v1"`) was in neither vocabulary. Closing it — adding
+enum values to the literal list — immediately turned red a file that a
+dedicated test certified as clean: a call-path fallback to a fixed campaign
+id. A "clean" certificate is only as good as the scanner's vocabulary;
+derive the vocabulary, and a hidden violation surfaces on the first run.
+
 ## Out of scope (recorded so they're deliberate)
 
 - Pin-alignment checks (withdrawn 2026-08-10; not a ratchet).
